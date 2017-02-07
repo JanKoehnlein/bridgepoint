@@ -114,6 +114,17 @@ assigning types, and otherwise changing signatures from BridgePoint (model
 explorer or properties) would be disabled. These actions could be modified to
 simply open the `.masl` file to the right place.
 
+> While this solves the issues for the `.masl` files, it shifts the same issue 
+> to the `*.mod` file. Taht contains action signatures (which should be persisted 
+> as text by then) as well as other declarations like objects and states (which 
+> would still be persisted as xtUML). 
+>
+> IMHO, the only really working solution is persisting xtUML either entirely in 
+> text or entirly as SQL. All kinds of hybrid persistence approaches will cause 
+> issues as long as we are not free to cut the model into sections with 
+> either one or the other persistence approach. MASL's mix of signatures and 
+> declarations seems to be the obstacle.
+
 5.1.2 Challenges and risks
 
 Text is king is a relatively high risk option because it would introduce a major
@@ -141,6 +152,10 @@ conditional -- allow states and transitions with no corresponding actions,
 however analysis would need to be done to determine the effect on model verifier
 and the model compilers.
 
+> The problem is not editing. You can build a graphical editor that saves its
+> models as text. The problem is once again the mixture of persistence as stated 
+> above.
+
 5.1.2.2 Deferred and native services
 
 Another challenge to text is king is deferred and native activities. MASL allows
@@ -152,6 +167,8 @@ a mechanism would need to be in place to either allow edit of these special
 activities or provide some sort of indication in the activity editor that they
 are deferred or native.
 
+> Not sure whether I got this. Is that a mismatch between MASL and xtUML?
+
 5.1.2.3 Type references
 
 xtUML does not do name based scoping and relies on unique IDs to identify types.
@@ -161,6 +178,9 @@ be ignored for the time being since MASL does not allow duplicate type names and
 this work would apply only to MASL models in the short term, however it is a
 long term consideration.
 
+> This is another counterargument against all kind of hybrid persistence 
+> approaches. 
+
 5.2 Single activity editing
 
 The second option is to modify the editor such that one activity is displayed in
@@ -168,6 +188,8 @@ a buffer with no signature so the user has only the opportunity to edit
 signature data from the BridgePoint structural editor (model explorer and
 properties). This option has fewer associated risks because it is more aligned
 with how the OAL editor has worked for years.
+
+> Do we still persist the activity bodies in MASL files then?
 
 5.2.1 Xtext editor
 
@@ -213,6 +235,12 @@ the action body to be linked properly.
 The signatures to provide for the editor could be generated from the xtUML model
 in the same way they have been generated for persistence to `.masl` files.
 
+> I'd really prefer to show the signature to the user in the editor. Maybe make it 
+> [[readonly]](http://ydtech.blogspot.de/2012/05/eclipse-editor-partially-editableread.html).
+> It gives so much context that is needed to implement the action body, and
+> it is a must to distinguish multiple such editors (the editor tab label will 
+> be to small to provide enough information).
+
 5.2.1.2 Duplicate activity definitions
 
 The Xtext editor would also have to handle the existing definition that is
@@ -220,6 +248,8 @@ located on disk in a `.masl` file. If the editor is validating a buffer in
 memory but linking against all the MASL data in the `models/` directory, there
 will be a duplicate on disk of the definition being edited in memory. This would
 have to be expected and handled by the Xtext editor.
+
+> Sounds feasible. If not, we could still disable the validation.
 
 5.2.1.3 Rename refactoring
 
@@ -239,6 +269,17 @@ user save any open buffer before renaming an element, or some sort of warning
 message that gives the user the choice to either save the current state of the
 buffer or replace it with the contents on disk.
 
+> Rename refactoring with unsaved editor's is already a mess in unique 
+> persistence scenarios. This is why Xtext provides an option to always save
+> all editors before refactoring. JDT has this option as well.
+>
+> The bigger problem here is what we already encountered: The order in which 
+> the xtUML and Xtext infrastructures perform the refactoring, especially as 
+> due to the name changes it may be hard for the later participant to find
+> the corresponding counterpart. This also seems to be the only place where 
+> information from MASL files needs to be fed back into the xtUML model, as 
+> the Xtext refactoring will only work on files.
+
 5.2.2 Persistence
 
 Editing the MASL in the xtUML memory model frees the tool to persist in whatever
@@ -248,11 +289,17 @@ would no longer be encouraged behavior. The Xtext editor accessed from within
 BridgePoint would edit one activity body at a time in memory and then replace
 the `.masl` file with the contents of the xtUML memory model.
 
+> More exactly: Replace the respective section in the MASL file with the contents 
+> of the xtUML memory model. It's a bit trickier, but feasible.
+
 Furthermore, it would break the Xtext editor to stop storing MASL in `.masl`
 files. The Xtext editor validates that each declared activity in a `.mod` file
 has a corresponding definition, so to take a step back and store MASL in
 `.xtuml` files would result in Xtext warnings that no implementation could be
 found for declared activities.
+
+> We should then disable this validation in Xtext and implement it on the xtUML 
+> side.
 
 5.3 Conclusions
 
